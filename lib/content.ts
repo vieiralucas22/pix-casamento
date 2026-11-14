@@ -32,9 +32,9 @@ export const siteContent = {
   footerNote: "Com amor",
 };
 
-export const presetAmounts: number[] = [
-  1,
-  ...Array.from({ length: 20 }, (_, index) => (index + 1) * 50),
-];
+export const presetAmounts: number[] = Array.from(
+  { length: 20 },
+  (_, index) => (index + 1) * 50,
+);
 
 export const customAmountMinimum = 1000;
