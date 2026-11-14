@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   MercadoPagoApiError,
-  getPayment,
+  getOrder,
 } from "@/lib/payments/mercadopago-client";
 import type { PaymentStatusResult } from "@/lib/payments/types";
 
@@ -12,11 +12,11 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const payment = await getPayment(id);
+    const order = await getOrder(id);
 
     const result: PaymentStatusResult = {
-      paymentId: String(payment.id),
-      status: payment.status,
+      paymentId: order.id,
+      status: order.status,
     };
 
     return NextResponse.json(result);

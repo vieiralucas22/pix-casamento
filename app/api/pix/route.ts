@@ -3,9 +3,13 @@ import { couple } from "@/lib/content";
 import { isValidGiftAmount } from "@/lib/payments/validate-amount";
 import {
   MercadoPagoApiError,
-  createPixPayment,
+  createPixOrder,
 } from "@/lib/payments/mercadopago-client";
 import type { CreatePixChargeResult } from "@/lib/payments/types";
+
+// Mercado Pago's default Pix order expiration is 24h (P1D) when
+// `expiration_time` isn't set on the request.
+const EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -19,24 +23,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const payment = await createPixPayment({
+    const order = await createPixOrder({
       value: amount,
       description: `Presente de casamento - ${couple.first} & ${couple.second}`,
     });
 
-    const transactionData = payment.point_of_interaction?.transaction_data;
+    const payment = order.transactions.payments[0];
+    const paymentMethod = payment?.payment_method;
 
-    if (!transactionData) {
+    if (!paymentMethod?.qr_code || !paymentMethod.qr_code_base64) {
       throw new Error("Mercado Pago did not return Pix QR code data.");
     }
 
     const result: CreatePixChargeResult = {
-      paymentId: String(payment.id),
-      status: payment.status,
-      amount: payment.transaction_amount,
-      qrCodeImage: transactionData.qr_code_base64,
-      copyPasteCode: transactionData.qr_code,
-      expirationDate: payment.date_of_expiration,
+      paymentId: order.id,
+      status: order.status,
+      amount: Number(order.total_amount),
+      qrCodeImage: paymentMethod.qr_code_base64,
+      copyPasteCode: paymentMethod.qr_code,
+      expirationDate: new Date(Date.now() + EXPIRATION_MS).toISOString(),
     };
 
     return NextResponse.json(result);

@@ -1,17 +1,16 @@
-export type MercadoPagoPaymentStatus =
-  | "pending"
-  | "approved"
-  | "authorized"
-  | "in_process"
-  | "rejected"
-  | "cancelled"
+export type MercadoPagoOrderStatus =
+  | "created"
+  | "processing"
+  | "processed"
+  | "action_required"
   | "refunded"
-  | "charged_back"
+  | "canceled"
+  | "failed"
   | string;
 
 export type CreatePixChargeResult = {
   paymentId: string;
-  status: MercadoPagoPaymentStatus;
+  status: MercadoPagoOrderStatus;
   amount: number;
   qrCodeImage: string;
   copyPasteCode: string;
@@ -20,5 +19,5 @@ export type CreatePixChargeResult = {
 
 export type PaymentStatusResult = {
   paymentId: string;
-  status: MercadoPagoPaymentStatus;
+  status: MercadoPagoOrderStatus;
 };

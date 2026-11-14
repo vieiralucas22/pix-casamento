@@ -6,17 +6,17 @@ import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
 import { siteContent } from "@/lib/content";
 import { formatBRL } from "@/lib/utils";
-import type { MercadoPagoPaymentStatus } from "@/lib/payments/types";
+import type { MercadoPagoOrderStatus } from "@/lib/payments/types";
 
-const PAID_STATUSES = new Set(["approved"]);
-const FINAL_STATUSES = new Set(["approved", "rejected", "cancelled"]);
+const PAID_STATUSES = new Set(["processed"]);
+const FINAL_STATUSES = new Set(["processed", "canceled", "failed", "refunded"]);
 const POLL_INTERVAL_MS = 5000;
 
-function statusMessage(status: MercadoPagoPaymentStatus) {
+function statusMessage(status: MercadoPagoOrderStatus) {
   if (PAID_STATUSES.has(status)) return siteContent.statusPaid;
-  if (status === "rejected") return siteContent.statusRejected;
-  if (status === "cancelled") return siteContent.statusOverdue;
-  if (status === "pending" || status === "in_process" || status === "authorized") {
+  if (status === "failed") return siteContent.statusRejected;
+  if (status === "canceled" || status === "refunded") return siteContent.statusOverdue;
+  if (status === "created" || status === "processing" || status === "action_required") {
     return siteContent.statusPending;
   }
   return siteContent.statusUnknown;
@@ -39,13 +39,13 @@ export function PaymentScreen({
 }: {
   paymentId: string;
   amount: number;
-  status: MercadoPagoPaymentStatus;
+  status: MercadoPagoOrderStatus;
   qrCodeImage: string;
   copyPasteCode: string;
   expirationDate: string;
   onBack: () => void;
 }) {
-  const [status, setStatus] = useState<MercadoPagoPaymentStatus>(initialStatus);
+  const [status, setStatus] = useState<MercadoPagoOrderStatus>(initialStatus);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {

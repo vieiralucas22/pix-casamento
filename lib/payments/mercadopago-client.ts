@@ -56,37 +56,52 @@ async function mercadoPagoFetch<T>(
   return body as T;
 }
 
-type MercadoPagoPaymentResponse = {
-  id: number;
+type MercadoPagoOrderPayment = {
+  id: string;
   status: string;
   status_detail: string;
-  transaction_amount: number;
-  date_of_expiration: string;
-  point_of_interaction?: {
-    transaction_data: {
-      qr_code: string;
-      qr_code_base64: string;
-    };
+  amount: string;
+  payment_method: {
+    id: string;
+    type: string;
+    qr_code?: string;
+    qr_code_base64?: string;
   };
 };
 
-export async function createPixPayment(params: {
+type MercadoPagoOrderResponse = {
+  id: string;
+  status: string;
+  status_detail: string;
+  total_amount: string;
+  transactions: {
+    payments: MercadoPagoOrderPayment[];
+  };
+};
+
+// The Payments API (/v1/payments) rejects newer-style access tokens with
+// "Unauthorized use of live credentials" — those accounts must use the
+// Orders API (/v1/orders) instead, which is what this client targets.
+export async function createPixOrder(params: {
   value: number;
   description: string;
   externalReference?: string;
 }) {
   const { payerEmail, payerCpf } = getConfig();
+  const amount = params.value.toFixed(2);
 
-  return mercadoPagoFetch<MercadoPagoPaymentResponse>("/v1/payments", {
+  return mercadoPagoFetch<MercadoPagoOrderResponse>("/v1/orders", {
     method: "POST",
     headers: {
       "X-Idempotency-Key": randomUUID(),
     },
     body: JSON.stringify({
-      transaction_amount: params.value,
-      payment_method_id: "pix",
+      type: "online",
+      total_amount: amount,
+      // Required by the Orders API even though the docs list it as optional.
+      external_reference: params.externalReference ?? randomUUID(),
+      processing_mode: "automatic",
       description: params.description,
-      external_reference: params.externalReference,
       payer: {
         email: payerEmail,
         identification: {
@@ -94,12 +109,21 @@ export async function createPixPayment(params: {
           number: payerCpf,
         },
       },
+      transactions: {
+        payments: [
+          {
+            amount,
+            payment_method: {
+              id: "pix",
+              type: "bank_transfer",
+            },
+          },
+        ],
+      },
     }),
   });
 }
 
-export async function getPayment(paymentId: string) {
-  return mercadoPagoFetch<MercadoPagoPaymentResponse>(
-    `/v1/payments/${paymentId}`,
-  );
+export async function getOrder(orderId: string) {
+  return mercadoPagoFetch<MercadoPagoOrderResponse>(`/v1/orders/${orderId}`);
 }
