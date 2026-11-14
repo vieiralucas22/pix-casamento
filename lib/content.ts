@@ -15,6 +15,19 @@ export const siteContent = {
   customSectionTitle: "Quero contribuir com outro valor",
   customFieldLabel: "Valor personalizado",
   continueLabel: "Continuar com Pix",
+  genericPaymentError: "Não foi possível gerar o pagamento Pix. Tente novamente.",
+  paymentHeading: "Pagamento via Pix",
+  paymentInstructions:
+    "Abra o app do seu banco e escaneie o QR Code, ou copie o código abaixo.",
+  copyButtonLabel: "Copiar código",
+  copiedLabel: "Copiado!",
+  expirationLabel: "Válido até",
+  statusPending: "Aguardando confirmação do pagamento...",
+  statusPaid: "Pagamento confirmado! Muito obrigado 💛",
+  statusOverdue: "Esse código expirou.",
+  statusRejected: "Pagamento não aprovado. Tente novamente ou escolha outro valor.",
+  statusUnknown: "Não foi possível verificar o status do pagamento.",
+  backLabel: "Escolher outro valor",
   footerNote: "Com amor",
 };
 

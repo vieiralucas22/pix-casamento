@@ -7,10 +7,15 @@ import { Heading } from "@/components/ui/Heading";
 import { PresetAmountGrid } from "@/components/gift/PresetAmountGrid";
 import { CustomAmountField } from "@/components/gift/CustomAmountField";
 import { GiftSummaryBar } from "@/components/gift/GiftSummaryBar";
+import { PaymentScreen } from "@/components/gift/PaymentScreen";
+import type { CreatePixChargeResult } from "@/lib/payments/types";
 
 export function AmountSelector() {
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [customDigits, setCustomDigits] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [payment, setPayment] = useState<CreatePixChargeResult | null>(null);
 
   const customValue = customDigits ? Number(customDigits) / 100 : null;
   const customError =
@@ -34,6 +39,49 @@ export function AmountSelector() {
     setSelectedPreset(null);
   }
 
+  async function handleContinue() {
+    if (selectedAmount === null) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch("/api/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: selectedAmount }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error ?? siteContent.genericPaymentError);
+      }
+
+      setPayment(data);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : siteContent.genericPaymentError,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (payment) {
+    return (
+      <PaymentScreen
+        paymentId={payment.paymentId}
+        amount={payment.amount}
+        status={payment.status}
+        qrCodeImage={payment.qrCodeImage}
+        copyPasteCode={payment.copyPasteCode}
+        expirationDate={payment.expirationDate}
+        onBack={() => setPayment(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -51,7 +99,12 @@ export function AmountSelector() {
         error={customError}
         onChange={handleCustomChange}
       />
-      <GiftSummaryBar selectedAmount={selectedAmount} />
+      <GiftSummaryBar
+        selectedAmount={selectedAmount}
+        isSubmitting={isSubmitting}
+        error={submitError}
+        onContinue={handleContinue}
+      />
     </div>
   );
 }
