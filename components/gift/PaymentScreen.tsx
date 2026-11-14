@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Heading } from "@/components/ui/Heading";
 import { Button } from "@/components/ui/Button";
@@ -36,6 +36,7 @@ export function PaymentScreen({
   copyPasteCode,
   expirationDate,
   onBack,
+  onStatusChange,
 }: {
   paymentId: string;
   amount: number;
@@ -44,25 +45,47 @@ export function PaymentScreen({
   copyPasteCode: string;
   expirationDate: string;
   onBack: () => void;
+  onStatusChange?: (status: MercadoPagoOrderStatus) => void;
 }) {
   const [status, setStatus] = useState<MercadoPagoOrderStatus>(initialStatus);
   const [copied, setCopied] = useState(false);
 
+  // Read via a ref inside poll() instead of a dependency: onStatusChange's
+  // identity changes on every tick (the parent merges into a new object), so
+  // depending on it directly would retrigger this effect — and its initial
+  // poll() — every 5s regardless of whether the status actually changed.
+  const onStatusChangeRef = useRef(onStatusChange);
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
+
   useEffect(() => {
     if (FINAL_STATUSES.has(status)) return;
 
-    const interval = setInterval(async () => {
+    let cancelled = false;
+
+    async function poll() {
       try {
         const response = await fetch(`/api/pix/${paymentId}/status`);
-        if (!response.ok) return;
+        if (!response.ok || cancelled) return;
         const data = await response.json();
         setStatus(data.status);
+        onStatusChangeRef.current?.(data.status);
       } catch {
         // transient network error, next poll will retry
       }
-    }, POLL_INTERVAL_MS);
+    }
 
-    return () => clearInterval(interval);
+    // Also fire immediately — relevant when this screen was just restored
+    // after the guest comes back from paying in their banking app, so the
+    // confirmation shows up right away instead of after the next interval.
+    poll();
+    const interval = setInterval(poll, POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [paymentId, status]);
 
   async function handleCopy() {
@@ -107,7 +130,11 @@ export function PaymentScreen({
 
       <p className="text-sm font-medium text-foreground">{statusMessage(status)}</p>
 
-      {!isPaid ? (
+      {isPaid ? (
+        <Button type="button" onClick={onBack}>
+          {siteContent.giveAgainLabel}
+        </Button>
+      ) : (
         <button
           type="button"
           onClick={onBack}
@@ -115,7 +142,7 @@ export function PaymentScreen({
         >
           {siteContent.backLabel}
         </button>
-      ) : null}
+      )}
     </Card>
   );
 }

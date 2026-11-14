@@ -8,14 +8,34 @@ import { PresetAmountGrid } from "@/components/gift/PresetAmountGrid";
 import { CustomAmountField } from "@/components/gift/CustomAmountField";
 import { GiftSummaryBar } from "@/components/gift/GiftSummaryBar";
 import { PaymentScreen } from "@/components/gift/PaymentScreen";
-import type { CreatePixChargeResult } from "@/lib/payments/types";
+import {
+  clearPendingPayment,
+  savePendingPayment,
+  usePendingPayment,
+} from "@/lib/payments/storage";
+import type { MercadoPagoOrderStatus } from "@/lib/payments/types";
 
 export function AmountSelector() {
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [customDigits, setCustomDigits] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [payment, setPayment] = useState<CreatePixChargeResult | null>(null);
+
+  // sessionStorage is the single source of truth for the active payment —
+  // this is what lets the confirmation survive the silent reload mobile
+  // browsers do when a guest leaves to pay in their banking app and comes
+  // back, instead of dropping them on the amount selector with no sign
+  // their Pix went through.
+  const payment = usePendingPayment();
+
+  function handleBack() {
+    clearPendingPayment();
+  }
+
+  function handleStatusChange(status: MercadoPagoOrderStatus) {
+    if (!payment) return;
+    savePendingPayment({ ...payment, status });
+  }
 
   const customValue = customDigits ? Number(customDigits) / 100 : null;
   const customError =
@@ -58,7 +78,7 @@ export function AmountSelector() {
         throw new Error(data?.error ?? siteContent.genericPaymentError);
       }
 
-      setPayment(data);
+      savePendingPayment(data);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : siteContent.genericPaymentError,
@@ -77,7 +97,8 @@ export function AmountSelector() {
         qrCodeImage={payment.qrCodeImage}
         copyPasteCode={payment.copyPasteCode}
         expirationDate={payment.expirationDate}
-        onBack={() => setPayment(null)}
+        onBack={handleBack}
+        onStatusChange={handleStatusChange}
       />
     );
   }

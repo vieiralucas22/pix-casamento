@@ -28,6 +28,7 @@ export const siteContent = {
   statusRejected: "Pagamento não aprovado. Tente novamente ou escolha outro valor.",
   statusUnknown: "Não foi possível verificar o status do pagamento.",
   backLabel: "Escolher outro valor",
+  giveAgainLabel: "Enviar outro presente",
   footerNote: "Com amor",
 };
 
